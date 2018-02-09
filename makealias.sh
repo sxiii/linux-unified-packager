@@ -30,8 +30,8 @@
 # FreeBSD: 10.0+ (pkg).
 # Totally this script supports 6 categories of package managers, 20+ pcs.
 ###############################################################################
-# Written 19~23 feb 2016 by Security XIII at Gmail Dot Com.
-# v 0.04 alpha, has to check it on many distros ! but probably usable somehow #
+# Written by Security XIII at Gmail Dot Com.
+# v 0.05 alpha, has to check it on many distros ! but probably usable somehow #
 ###############################################################################
 # Re-creates empty bash aliases file for you (fix if needed)
 afile="$HOME/.bash_aliases"
