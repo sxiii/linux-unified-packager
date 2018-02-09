@@ -168,3 +168,5 @@ do
 done
 
 echo "Aliases added. If you don't know them just open this script to find out."
+
+echo "source ~/.bash_aliases" >> ~/.bashrc 
