@@ -47,6 +47,8 @@ Note: you need to download & run the script only once.
 6. That's all. The script is needed only once so you can remove it.
 `cd .. ; rm -rf ./linux-unified*`
 
+If the script returned some errors on step 5 and you don't know what to do with them, please post these errors in this [project issues](https://github.com/sxiii/linux-unified-packager/issues).
+
 ## But still who needs this? And how does it work?
 It creates short aliases (cli commands) that can be used as simple as:
 
