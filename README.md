@@ -12,6 +12,20 @@ Alias manager. It helps you to install, update, remove and work with the softwar
 * If you want to learn how to write bash scripts
 * Your personal reason? Make an issue or pull request :)
 
+## How to make this script work?
+
+Note: you need to download & run the script only once. 
+1. At first, you have to use either wget, curl, git (only one of them) or manually copy-paste the internals of .SH script.
+`sudo apt install git`
+2. Download the script with the software of your choice (I choose git, if you choose other the command changes of course):
+`git clone https://github.com/sxiii/linux-unified-packager`
+3. Open the terminal & go to directory where you did download the script.
+`cd linux-unified*`
+4. Make the script executable
+`chmod +x *sh`
+5. Execute the script
+`./
+
 ## Supported linux distributions (and package managers)
 
 Totally this script supports 10 categories of package managers, 20 pcs.
