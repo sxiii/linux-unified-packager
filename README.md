@@ -29,15 +29,19 @@ Totally this script supports 10 categories of package managers, 20 pcs.
 
 ## But still who needs this? And how does it work?
 You ask, what is this script for? It creates short aliases (cli commands) that can be used as simple as:
-* i = install package, ii = install package (from file)
-* r = remove,
-* up = update repos (repositories; it means update list of available packages from the server)
-* ug = upgrade package or system,
-* li = list installed packages (warning: may be large!),
-* rl = list repositories (list packages that are available in repositories - "repo list"),
-* ra = add new repository or PPA ("repository add"),
-* rr = remove repository or PPA ("repository remove"),
-* lsb = system information ("linux standard base").
+
+Alias (short cmd) | Actual action/result (what this command does)
+| - | - |
+i | install package
+ii | install package (from file)
+r | remove
+up | update repos (repositories; it means update list of available packages from the server)
+ug | upgrade package or system
+li | list installed packages (warning: may be large!)
+rl | list repositories (list packages that are available in repositories - "repo list")
+ra | add new repository or PPA ("repository add")
+rr | remove repository or PPA ("repository remove")
+lsb | system information ("linux standard base")
 
 Of course, you have to ensure you don't have these short programs or aliases in your system already. But in the most cases (I believe, 99.9%) they won't be such, as I choosed them wisely. Only if you added themselves :) At least these commands are free on basic installations of Ubuntu and ArchLinux.
 
