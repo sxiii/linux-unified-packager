@@ -2,6 +2,10 @@
 
 Alias manager. It helps you to install, update, remove and work with the software in the same manner in any linux distro.
 
+## Ads banner :)
+
+![Ads](https://imgur.com/MaJcQzW.png)
+
 ## Why this is important? Who needs this?
 
 * If you would like to test new distro but don't wont to search for new commands (hobby)
