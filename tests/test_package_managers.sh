@@ -176,7 +176,7 @@ test_yum_aliases() {
     's=sudo yum list' \
     'li=sudo rpm -qa' \
     'rl=sudo yum repolist' \
-    'ra=sudo cd /etc/yum.repos.d/ && ls'
+    'ra=sudo ls /etc/yum.repos.d/'
 }
 
 test_apk_aliases() {

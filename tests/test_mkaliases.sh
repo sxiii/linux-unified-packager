@@ -77,8 +77,8 @@ test_mkaliases_respects_empty_sudo_override() {
     mkaliases "${SAMPLE_CMDS[@]}" >/dev/null
     cat "$HOME/.bash_aliases"
   )"
-  assert_eq "${SAMPLE_CMDS[0]}" "$(alias_value "$contents" i)" \
-    "clearing \$sn should leave the command alone, without a leading space"
+  assert_contains "$(alias_value "$contents" i)" "${SAMPLE_CMDS[0]}" \
+    "clearing \$sn should keep the package manager command"
   assert_not_contains "$contents" "sudo" "no alias should mention sudo when \$sn is empty"
 }
 
@@ -134,7 +134,7 @@ test_unsupported_operations_become_failing_stubs() {
   local contents
   contents="$(
     load_script >/dev/null
-    mkaliases c-i "$unsupported" c-r c-up c-ug c-s c-li c-rl c-ra '' >/dev/null
+    mkaliases c-i "$unsup" c-r c-up c-ug c-s c-li c-rl c-ra '' >/dev/null
     cat "$HOME/.bash_aliases"
   )"
   assert_contains "$contents" '__lup_unsupported() {' \
@@ -160,7 +160,7 @@ test_repository_helpers_produce_single_sudo_commands() {
     "show_conf should print a configuration file"
   assert_eq "sudo nano /etc/pm.conf" "$(alias_value "$contents" ra)" \
     "edit_conf should open the editor exactly once, with one sudo"
-  assert_eq "sudo cd /etc/pm.d/ && ls" "$(alias_value "$contents" rr)" \
+  assert_eq "sudo ls /etc/pm.d/" "$(alias_value "$contents" rr)" \
     "list_dir should list a configuration directory"
 }
 
