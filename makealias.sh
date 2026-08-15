@@ -51,7 +51,9 @@ warn() {
 # Bash aliases file this script generates
 afile="$HOME/.bash_aliases"
 # Shell startup file which sources the aliases file
-rcfile="$HOME/.bashrc"
+bashrc="$HOME/.bashrc"
+# Line added to the shell startup file
+rcline='source ~/.bash_aliases'
 # If your distro/user doesen't need sudo just comment the following line:
 sn='sudo'
 # Choose your editor (to open mirror files)
@@ -65,10 +67,11 @@ unsup='__lup_unsupported'
 
 # Keeps a copy of an existing aliases file before it gets overwritten
 backup_afile() {
+  local backup
   [ -e "$afile" ] || return 0
-  cp -- "$afile" "$afile.bak" ||
-    die "cannot back up existing '$afile' to '$afile.bak'"
-  warn "existing '$afile' was replaced, previous version kept as '$afile.bak'"
+  backup="$afile.backup-$(date +%Y%m%d%H%M%S)"
+  mv -- "$afile" "$backup" || die "cannot back up existing '$afile' to '$backup'"
+  warn "existing '$afile' was replaced, previous version saved to '$backup'"
 }
 
 # Re-creates empty bash aliases file for you (fix if needed)
@@ -245,10 +248,11 @@ done
 
 echo "Aliases added. If you don't know them just open this script to find out."
 
+# Load the aliases from .bashrc, but only add the line once
 if [ -n "$debug" ]; then
-  echo "source $afile"
-elif grep -qF -e "source $afile" -e 'source ~/.bash_aliases' "$rcfile" 2>/dev/null; then
-  echo "'$rcfile' already sources '$afile', leaving it as it is."
+  echo "$rcline"
+elif grep -qxF "$rcline" "$bashrc" 2>/dev/null; then
+  echo "'$bashrc' already sources '$afile', leaving it as it is."
 else
-  echo "source $afile" >> "$rcfile" || die "cannot add 'source $afile' to '$rcfile'"
+  echo "$rcline" >> "$bashrc" || die "cannot add '$rcline' to '$bashrc'"
 fi
