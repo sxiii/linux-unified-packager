@@ -91,6 +91,18 @@ Aliases for operations your package manager does not support also fail loudly: `
 
 To see what the script would do without touching any file, set `debug="yes"` near the top of the script and run it - the aliases are printed instead of written.
 
+## Running the tests
+
+The repository ships a small test suite that needs nothing but bash and coreutils:
+
+`bash tests/run_tests.sh`
+
+The tests source `makealias.sh` (its detection loop only runs when the script is executed directly) and run it against a temporary `$HOME` with a stubbed `PATH`, so they never touch your real dotfiles and never call a real package manager.
+
+* `tests/test_mkaliases.sh` - the alias writer: alias names, argument order, `$sn`/sudo handling, sourcing safety
+* `tests/test_package_managers.sh` - all 20 `f<manager>` functions: detected name, complete alias set, no empty commands, exact aliases for one manager per family
+* `tests/test_main.sh` - detection and file side effects: which managers get configured, `~/.bash_aliases` recreation, `~/.bashrc` handling
+
 ## Developers & testers needed
 If you just tested the script on your local PC and it works well, you can write an issue about that or commit here exact name & version of your system. More importantly, if the script DOES NOT work well, you should commit the issue to this repo with all details on your system, please. It will help whole community.
 

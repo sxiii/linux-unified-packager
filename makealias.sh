@@ -277,27 +277,34 @@ fpkg() { pm pkg "FreeBSD 10.0+"
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
 
-found=0
-for i in "${checkarray[@]}"
-do
-  "$checkcmd" "$i" >/dev/null 2>&1 || continue
-  "f$i" || die "found '$i' but failed to create aliases for it"
-  found=$((found + 1))
-done
+main() {
+  found=0
+  for i in "${checkarray[@]}"
+  do
+    "$checkcmd" "$i" >/dev/null 2>&1 || continue
+    "f$i" || die "found '$i' but failed to create aliases for it"
+    found=$((found + 1))
+  done
 
-[ "$found" -gt 0 ] ||
-  die "none of the supported package managers (${checkarray[*]}) was found, no aliases were created"
+  [ "$found" -gt 0 ] ||
+    die "none of the supported package managers (${checkarray[*]}) was found, no aliases were created"
 
-[ "$found" -eq 1 ] ||
-  warn "$found package managers were found, aliases were created for the last one only"
+  [ "$found" -eq 1 ] ||
+    warn "$found package managers were found, aliases were created for the last one only"
 
-echo "Aliases added. If you don't know them just open this script to find out."
+  echo "Aliases added. If you don't know them just open this script to find out."
 
-# Load the aliases from .bashrc, but only add the line once
-if [ -n "$debug" ]; then
-  echo "$rcline"
-elif grep -qxF "$rcline" "$bashrc" 2>/dev/null; then
-  echo "'$bashrc' already sources '$afile', leaving it as it is."
-else
-  echo "$rcline" >> "$bashrc" || die "cannot add '$rcline' to '$bashrc'"
+  # Load the aliases from .bashrc, but only add the line once
+  if [ -n "$debug" ]; then
+    echo "$rcline"
+  elif grep -qxF "$rcline" "$bashrc" 2>/dev/null; then
+    echo "'$bashrc' already sources '$afile', leaving it as it is."
+  else
+    echo "$rcline" >> "$bashrc" || die "cannot add '$rcline' to '$bashrc'"
+  fi
+}
+
+# Only run when executed directly, so the functions above can be sourced (tests)
+if [ "${BASH_SOURCE[0]}" = "${0}" ]; then
+  main "$@"
 fi
