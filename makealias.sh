@@ -94,11 +94,11 @@ EOF
 
 # Writes a single alias, or an unsupported-operation stub when no command exists
 mkalias() {
-  local name="$1" cmd="$2" args="$3" line
+  local name="$1" cmd="$2" line
   if [ "$cmd" = "$unsup" ] || [ -z "$cmd" ]; then
     line="alias $name=\"$unsup $name\""
   else
-    line="alias $name=\"$sn $cmd $args\""
+    line="alias $name=\"$sn $cmd\""
   fi
   if [ -n "$debug" ]; then
     echo "$line"
@@ -115,35 +115,29 @@ mkalias() {
 # ra  add new repository or PPA           rr  removes repository or PPA
 alias_names=(i ii r up ug s li rl ra rr)
 
-# Prints a single alias definition (callers redirect it into the aliases file)
-add_alias() {
-  $debug echo "alias $1=\"$2\""
-}
-
 # Takes one command per alias, in the order of alias_names above
 mkaliases() {
+  local name lsb
+  [ "$#" -eq "${#alias_names[@]}" ] ||
+    die "mkaliases needs ${#alias_names[@]} commands (got $#) for package manager '${s:-unknown}'"
   shopt -s expand_aliases
-  if [ "$#" -ne "${#alias_names[@]}" ]; then
-    echo "mkaliases: expected ${#alias_names[@]} commands, got $#" >&2
-    return 1
-  fi
-  local name
-  {
-    for name in "${alias_names[@]}"; do
-      add_alias "$name" "$sn $1"; shift
-    done
-    add_alias lsb 'echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*'
-  } >> "$afile"
-  if [ -z "$debug" ]; then
+  resetaliases
+  for name in "${alias_names[@]}"; do
+    mkalias "$name" "$1"; shift
+  done
+  lsb='echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*' # info
+  if [ -n "$debug" ]; then
+    echo "alias lsb=\"$lsb\""
+  else
+    echo "alias lsb=\"$lsb\"" >> "$afile" || die "cannot write alias 'lsb' to '$afile'"
     # shellcheck source=/dev/null
-    source "$afile"
+    source "$afile" || warn "'$afile' was written but could not be sourced"
   fi
 }
 
 # Shared building blocks for the package manager commands below
-unsupported="$err1 $err2"          # operation the package manager has no command for
 show_conf() { echo "cat $1"; }     # print a configuration file
-edit_conf() { echo "$sn $ed $1"; } # open a configuration file in the editor
+edit_conf() { echo "$ed $1"; }     # open a configuration file in the editor
 list_dir() { echo "cd $1 && ls"; } # list a repository configuration directory
 
 # Reports the detected package manager and exports its name as $s
@@ -159,7 +153,8 @@ checkcmd='hash'
 # "fzeta" similar to others. Last step, add it to the end of 'checkarray' array.
 # When writing functions, pass one command per alias to mkaliases, in the same
 # order as the alias_names array above (10 arguments, each one quoted).
-# Use "$unsupported" for operations your package manager cannot do, and the
+# Use "$unsup" for operations your package manager cannot do (the resulting
+# alias then explains the problem and returns 1 when it is used), and the
 # show_conf/edit_conf/list_dir helpers for repository configuration commands.
 
   # Writing own function help sample
@@ -202,7 +197,7 @@ fslapt-get() { pm slapt-get "Vector"
 }
 
 fnetpkg() { pm netpkg "Zenwalk"
-  mkaliases "$s" "$s" "$s remove" "$unsupported" "$s upgrade" \
+  mkaliases "$s" "$s" "$s remove" "$unsup" "$s upgrade" \
     "$s list | grep" "$s list I" "$s mirror" \
     "$(edit_conf /etc/netpkg.conf)" "$(edit_conf /etc/netpkg.conf)"
 }
@@ -220,8 +215,8 @@ fpacman() { pm pacman "Arch/Manjaro"
 }
 
 fconary() { pm conary "Foresight/rPath"
-  mkaliases "$s update" "$s update" "$s erase" "$unsupported" "$s updateall" \
-    "$s query" "$s query" "$unsupported" "$unsupported" "$unsupported"
+  mkaliases "$s update" "$s update" "$s erase" "$unsup" "$s updateall" \
+    "$s query" "$s query" "$unsup" "$unsup" "$unsup"
 }
 
 fapk() { pm apk "Alpine"
@@ -239,45 +234,45 @@ fsmart() { pm smart "Mandriva/OpenSUSE"
 fpkcon() { pm pkcon "Fedora/Ubuntu/OpenSUSE/Mandriva"
   mkaliases "$s install" "$s install-file" "$s remove" "$s refresh" \
     "$s upgrade" "$s search" "$s search" "$s repo-list" \
-    "$unsupported" "$unsupported"
+    "$unsup" "$unsup"
 }
 
 femerge() { pm emerge "Gentoo"
-  mkaliases "$s" "$unsupported" "$s -aC" "$s --sync" "$s -NuDa world" \
+  mkaliases "$s" "$unsup" "$s -aC" "$s --sync" "$s -NuDa world" \
     "$s --search" "qlist -I" "layman -L" "layman -a" "layman -d"
 }
 
 flin() { pm lin "Lunar"
-  mkaliases "$s" "$unsupported" "lrm" "$s moonbase" "lunar update" \
-    "lvu search" "lvu installed" "$unsupported" "$unsupported" "$unsupported"
+  mkaliases "$s" "$unsup" "lrm" "$s moonbase" "lunar update" \
+    "lvu search" "lvu installed" "$unsup" "$unsup" "$unsup"
 }
 
 fcast() { pm cast "Source Mage"
-  mkaliases "$s" "$unsupported" "dispel" "scribe update" "sorcery upgrade" \
+  mkaliases "$s" "$unsup" "dispel" "scribe update" "sorcery upgrade" \
     "gaze search" "gaze installed" "scribe index" "scribe add" "scribe remove"
 }
 
 fnix-env() { pm nix-env "NixOS"
-  mkaliases "$s -i" "$unsupported" "$s -e" "nix-channel --update" \
+  mkaliases "$s -i" "$unsup" "$s -e" "nix-channel --update" \
     "nix-env -u" "nix-env -qa" "nix-env -q" "nix-channel --list" \
     "nix-channel --add" "nix-channel --remove"
 }
 
 fxbps-install() { pm xbps-install "Void"
-  mkaliases "$s" "$unsupported" "xbps-remove" "$s -S" "$s -u" \
+  mkaliases "$s" "$unsup" "xbps-remove" "$s -S" "$s -u" \
     "xbps-query -Rs" "xbps-query -l" "xbps-query -L" \
     "$(list_dir /etc/xbps/repo.d/)" "$(list_dir /etc/xbps/repo.d/)"
 }
 
 fsnappy() { pm snappy "Ubuntu Snappy"
-  mkaliases "$s install" "$unsupported" "$s remove" "$unsupported" \
+  mkaliases "$s install" "$unsup" "$s remove" "$unsup" \
     "$s update" "$s search" "$s list" \
-    "$unsupported" "$unsupported" "$unsupported"
+    "$unsup" "$unsup" "$unsup"
 }
 
 fpkg() { pm pkg "FreeBSD 10.0+"
   mkaliases "$s install" "$s add" "$s remove" "$s update" "$s upgrade" \
-    "$s search" "$s info" "$unsupported" "$unsupported" "$unsupported"
+    "$s search" "$s info" "$unsup" "$unsup" "$unsup"
 }
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
