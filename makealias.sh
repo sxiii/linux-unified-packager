@@ -34,8 +34,15 @@
 # v 0.05 alpha, has to check it on many distros ! but probably usable somehow #
 ###############################################################################
 # Re-creates empty bash aliases file for you (fix if needed)
+# Any existing file is kept as a timestamped backup instead of being deleted
 afile="$HOME/.bash_aliases"
-rm -f "$afile"; touch "$afile"
+bashrc="$HOME/.bashrc"
+if [ -e "$afile" ]; then
+  backup="$afile.backup-$(date +%Y%m%d%H%M%S)"
+  mv -- "$afile" "$backup"
+  echo "Existing aliases saved to $backup"
+fi
+: > "$afile"
 # If your distro/user doesen't need sudo just comment the following line:
 sn='sudo'
 # Choose your editor (to open mirror files)
@@ -56,9 +63,9 @@ err2="not needed"
 # ra  add new repository or PPA           rr  removes repository or PPA
 alias_names=(i ii r up ug s li rl ra rr)
 
-# Writes a single alias into the aliases file
+# Prints a single alias definition (callers redirect it into the aliases file)
 add_alias() {
-  $debug echo "alias $1=\"$2\"" >> "$afile"
+  $debug echo "alias $1=\"$2\""
 }
 
 # Takes one command per alias, in the order of alias_names above
@@ -69,11 +76,16 @@ mkaliases() {
     return 1
   fi
   local name
-  for name in "${alias_names[@]}"; do
-    add_alias "$name" "$sn $1"; shift
-  done
-  add_alias lsb 'echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*'
-  source "$afile"
+  {
+    for name in "${alias_names[@]}"; do
+      add_alias "$name" "$sn $1"; shift
+    done
+    add_alias lsb 'echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*'
+  } >> "$afile"
+  if [ -z "$debug" ]; then
+    # shellcheck source=/dev/null
+    source "$afile"
+  fi
 }
 
 # Shared building blocks for the package manager commands below
@@ -218,11 +230,15 @@ fpkg() { pm pkg "FreeBSD 10.0+"
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
 
-for i in ${checkarray[@]};
+for i in "${checkarray[@]}";
 do
-  ($checkcmd $i &>/dev/null) && f$i
+  ("$checkcmd" "$i" &>/dev/null) && "f$i"
 done
 
 echo "Aliases added. If you don't know them just open this script to find out."
 
-echo "source ~/.bash_aliases" >> ~/.bashrc
+# Load the aliases from .bashrc, but only add the line once
+line='source ~/.bash_aliases'
+if ! grep -qxF "$line" "$bashrc" 2>/dev/null; then
+  echo "$line" >> "$bashrc"
+fi
