@@ -78,6 +78,9 @@ finish_tests() {
 
 # --- helpers specific to makealias.sh ------------------------------------------
 
+# One placeholder command per alias, in the order mkaliases expects them.
+SAMPLE_CMDS=(c-i c-ii c-r c-up c-ug c-s c-li c-rl c-ra c-rr)
+
 # Source the script (functions only, main() is not executed) inside the caller's
 # shell with HOME pointed at the test sandbox.
 load_script() {
@@ -102,6 +105,15 @@ aliases_for() {
   (
     load_script >/dev/null
     "$fn" >/dev/null 2>&1
+    cat "$HOME/.bash_aliases"
+  )
+}
+
+# Generate an aliases file from SAMPLE_CMDS and print it.
+sample_aliases() {
+  (
+    load_script >/dev/null
+    mkaliases "${SAMPLE_CMDS[@]}" >/dev/null
     cat "$HOME/.bash_aliases"
   )
 }

@@ -94,11 +94,11 @@ EOF
 
 # Writes a single alias, or an unsupported-operation stub when no command exists
 mkalias() {
-  local name="$1" cmd="$2" args="$3" line
+  local name="$1" cmd="$2" line
   if [ "$cmd" = "$unsup" ] || [ -z "$cmd" ]; then
     line="alias $name=\"$unsup $name\""
   else
-    line="alias $name=\"$sn $cmd $args\""
+    line="alias $name=\"${sn:+$sn }$cmd\""
   fi
   if [ -n "$debug" ]; then
     echo "$line"
@@ -115,35 +115,30 @@ mkalias() {
 # ra  add new repository or PPA           rr  removes repository or PPA
 alias_names=(i ii r up ug s li rl ra rr)
 
-# Prints a single alias definition (callers redirect it into the aliases file)
-add_alias() {
-  $debug echo "alias $1=\"$2\""
-}
-
 # Takes one command per alias, in the order of alias_names above
 mkaliases() {
+  local name lsb='echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*'
+  [ "$#" -eq "${#alias_names[@]}" ] ||
+    die "mkaliases needs ${#alias_names[@]} commands (got $#) for package manager '${s:-unknown}'"
   shopt -s expand_aliases
-  if [ "$#" -ne "${#alias_names[@]}" ]; then
-    echo "mkaliases: expected ${#alias_names[@]} commands, got $#" >&2
-    return 1
-  fi
-  local name
-  {
-    for name in "${alias_names[@]}"; do
-      add_alias "$name" "$sn $1"; shift
-    done
-    add_alias lsb 'echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*'
-  } >> "$afile"
-  if [ -z "$debug" ]; then
+  resetaliases
+  for name in "${alias_names[@]}"; do
+    mkalias "$name" "$1"
+    shift
+  done
+  if [ -n "$debug" ]; then
+    echo "alias lsb=\"$lsb\""
+  else
+    echo "alias lsb=\"$lsb\"" >> "$afile" || die "cannot write alias 'lsb' to '$afile'"
     # shellcheck source=/dev/null
-    source "$afile"
+    source "$afile" || warn "'$afile' was written but could not be sourced"
   fi
 }
 
 # Shared building blocks for the package manager commands below
-unsupported="$err1 $err2"          # operation the package manager has no command for
+unsupported="$unsup"               # operation the package manager has no command for
 show_conf() { echo "cat $1"; }     # print a configuration file
-edit_conf() { echo "$sn $ed $1"; } # open a configuration file in the editor
+edit_conf() { echo "$ed $1"; }     # open a configuration file in the editor
 list_dir() { echo "cd $1 && ls"; } # list a repository configuration directory
 
 # Reports the detected package manager and exports its name as $s

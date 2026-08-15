@@ -81,6 +81,15 @@ test_no_alias_has_an_empty_command() {
   done < <(pm_names)
 }
 
+test_no_alias_is_prefixed_with_sudo_twice() {
+  local pm contents
+  while read -r pm; do
+    contents="$(aliases_for "f$pm")"
+    assert_not_contains "$contents" 'sudo sudo' \
+      "f$pm: \$sn is added by mkalias, the commands must not repeat it"
+  done < <(pm_names)
+}
+
 # Operations a package manager cannot perform must fail loudly rather than
 # quietly running something else.
 test_unsupported_operations_fail_when_used() {
@@ -223,7 +232,9 @@ test_pkg_aliases() {
 
 test_cast_aliases() {
   assert_alias_set fcast \
-    'r=sudo dispel ' \
+    'i=sudo cast' \
+    'ii=__lup_unsupported ii' \
+    'r=sudo dispel' \
     'up=sudo scribe update' \
     'ug=sudo sorcery upgrade' \
     's=sudo gaze search' \
@@ -240,6 +251,7 @@ run_test "every function announces its own package manager" test_every_function_
 run_test "every function writes the full alias set" test_every_function_writes_the_full_alias_set
 run_test "every function produces a sourceable aliases file" test_every_function_produces_sourceable_aliases
 run_test "no generated alias has an empty command" test_no_alias_has_an_empty_command
+run_test "no alias is prefixed with sudo twice" test_no_alias_is_prefixed_with_sudo_twice
 run_test "unsupported operations fail when used" test_unsupported_operations_fail_when_used
 run_test "apt-get aliases" test_apt_get_aliases
 run_test "pacman aliases" test_pacman_aliases
