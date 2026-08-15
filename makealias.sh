@@ -33,27 +33,79 @@
 # Written by Security XIII at Gmail Dot Com.
 # v 0.05 alpha, has to check it on many distros ! but probably usable somehow #
 ###############################################################################
-# Re-creates empty bash aliases file for you (fix if needed)
-# Any existing file is kept as a timestamped backup instead of being deleted
+set -u -o pipefail
+
+progname="${0##*/}"
+
+# Reports a fatal problem and stops the script
+die() {
+  echo "$progname: error: $*" >&2
+  exit 1
+}
+
+# Reports a problem the user should know about, without stopping the script
+warn() {
+  echo "$progname: warning: $*" >&2
+}
+
+# Bash aliases file this script generates
 afile="$HOME/.bash_aliases"
+# Shell startup file which sources the aliases file
 bashrc="$HOME/.bashrc"
-if [ -e "$afile" ]; then
-  backup="$afile.backup-$(date +%Y%m%d%H%M%S)"
-  mv -- "$afile" "$backup"
-  echo "Existing aliases saved to $backup"
-fi
-: > "$afile"
+# Line added to the shell startup file
+rcline='source ~/.bash_aliases'
 # If your distro/user doesen't need sudo just comment the following line:
 sn='sudo'
 # Choose your editor (to open mirror files)
 ed='nano'
 # Distro founded
 df="You're using"
-# Set debug="echo" to turn on debug mode (does not make any syschanges)
+# Set debug="yes" to turn on debug mode (prints aliases, makes no syschanges)
 debug=""
-# Error handling
-err1="echo"
-err2="not needed"
+# Marker for operations a package manager does not support
+unsup='__lup_unsupported'
+
+# Keeps a copy of an existing aliases file before it gets overwritten
+backup_afile() {
+  local backup
+  [ -e "$afile" ] || return 0
+  backup="$afile.backup-$(date +%Y%m%d%H%M%S)"
+  mv -- "$afile" "$backup" || die "cannot back up existing '$afile' to '$backup'"
+  warn "existing '$afile' was replaced, previous version saved to '$backup'"
+}
+
+# Re-creates empty bash aliases file for you (fix if needed)
+resetdone=""
+resetaliases() {
+  [ -n "$debug" ] && return 0
+  [ -z "$resetdone" ] || return 0
+  resetdone="yes"
+  backup_afile
+  : > "$afile" || die "cannot write to '$afile'"
+  # Aliases for operations the package manager cannot do fail loudly instead of
+  # pretending the operation succeeded.
+  cat >> "$afile" <<EOF || die "cannot write to '$afile'"
+$unsup() {
+  echo "\$1: this operation is not supported by your package manager" >&2
+  return 1
+}
+EOF
+}
+
+# Writes a single alias, or an unsupported-operation stub when no command exists
+mkalias() {
+  local name="$1" cmd="$2" args="$3" line
+  if [ "$cmd" = "$unsup" ] || [ -z "$cmd" ]; then
+    line="alias $name=\"$unsup $name\""
+  else
+    line="alias $name=\"$sn $cmd $args\""
+  fi
+  if [ -n "$debug" ]; then
+    echo "$line"
+  else
+    echo "$line" >> "$afile" || die "cannot write alias '$name' to '$afile'"
+  fi
+}
 
 # Aliases created by this script, in the order mkaliases expects its arguments:
 # i   installing packages (from repo)     ug  upgrading packages (themselves)
@@ -230,15 +282,27 @@ fpkg() { pm pkg "FreeBSD 10.0+"
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
 
-for i in "${checkarray[@]}";
+found=0
+for i in "${checkarray[@]}"
 do
-  ("$checkcmd" "$i" &>/dev/null) && "f$i"
+  "$checkcmd" "$i" >/dev/null 2>&1 || continue
+  "f$i" || die "found '$i' but failed to create aliases for it"
+  found=$((found + 1))
 done
+
+[ "$found" -gt 0 ] ||
+  die "none of the supported package managers (${checkarray[*]}) was found, no aliases were created"
+
+[ "$found" -eq 1 ] ||
+  warn "$found package managers were found, aliases were created for the last one only"
 
 echo "Aliases added. If you don't know them just open this script to find out."
 
 # Load the aliases from .bashrc, but only add the line once
-line='source ~/.bash_aliases'
-if ! grep -qxF "$line" "$bashrc" 2>/dev/null; then
-  echo "$line" >> "$bashrc"
+if [ -n "$debug" ]; then
+  echo "$rcline"
+elif grep -qxF "$rcline" "$bashrc" 2>/dev/null; then
+  echo "'$bashrc' already sources '$afile', leaving it as it is."
+else
+  echo "$rcline" >> "$bashrc" || die "cannot add '$rcline' to '$bashrc'"
 fi
