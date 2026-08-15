@@ -34,8 +34,15 @@
 # v 0.05 alpha, has to check it on many distros ! but probably usable somehow #
 ###############################################################################
 # Re-creates empty bash aliases file for you (fix if needed)
+# Any existing file is kept as a timestamped backup instead of being deleted
 afile="$HOME/.bash_aliases"
-rm $afile; touch $afile
+bashrc="$HOME/.bashrc"
+if [ -e "$afile" ]; then
+  backup="$afile.backup-$(date +%Y%m%d%H%M%S)"
+  mv -- "$afile" "$backup"
+  echo "Existing aliases saved to $backup"
+fi
+: > "$afile"
 # If your distro/user doesen't need sudo just comment the following line:
 sn='sudo'
 # Choose your editor (to open mirror files)
@@ -51,18 +58,23 @@ err2="not needed"
 # Aliases (you can edit them to your like)
 mkaliases() {
 shopt -s expand_aliases
-$debug echo "alias i=\"$sn $1 $2\"" >> $afile        # installing packages (from repo)
-$debug echo "alias ii=\"$sn $3 $4\"" >> $afile       # installing packages (from file)
-$debug echo "alias r=\"$sn $5 $6\"" >> $afile        # removing packages
-$debug echo "alias up=\"$sn $7 $8\"" >> $afile       # updating packages (list)
-$debug echo "alias ug=\"$sn $9 ${10}\"" >> $afile    # upgrading packages (themselves)
-$debug echo "alias s=\"$sn ${11} ${12}\"" >> $afile  # searching packages
-$debug echo "alias li=\"$sn ${13} ${14}\"" >> $afile # list installed packages
-$debug echo "alias rl=\"$sn ${15} ${16}\"" >> $afile   # list your repositories
-$debug echo "alias ra=\"$sn ${17} ${18}\"" >> $afile # add new repository or PPA
-$debug echo "alias rr=\"$sn ${19} ${20}\"" >> $afile # removes repository or PPA
-$debug echo "alias lsb=\"echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*\"" >> $afile # info
-source ~/.bash_aliases
+{
+$debug echo "alias i=\"$sn $1 $2\""        # installing packages (from repo)
+$debug echo "alias ii=\"$sn $3 $4\""       # installing packages (from file)
+$debug echo "alias r=\"$sn $5 $6\""        # removing packages
+$debug echo "alias up=\"$sn $7 $8\""       # updating packages (list)
+$debug echo "alias ug=\"$sn $9 ${10}\""    # upgrading packages (themselves)
+$debug echo "alias s=\"$sn ${11} ${12}\""  # searching packages
+$debug echo "alias li=\"$sn ${13} ${14}\"" # list installed packages
+$debug echo "alias rl=\"$sn ${15} ${16}\""   # list your repositories
+$debug echo "alias ra=\"$sn ${17} ${18}\"" # add new repository or PPA
+$debug echo "alias rr=\"$sn ${19} ${20}\"" # removes repository or PPA
+$debug echo "alias lsb=\"echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*\"" # info
+} >> "$afile"
+if [ -z "$debug" ]; then
+  # shellcheck source=/dev/null
+  source "$afile"
+fi
 }
 
 # Command to check existence of package manager (can also be command or type)
@@ -140,7 +152,7 @@ function flin { s='lin'; echo "$df $s on Lunar"
   mkaliases $s '' "$err1" "$err2" lrm '' $s moonbase lunar update lvu search lvu installed "$err1" "$err2" "$err1" "$err2" "$err1" "$err2"
 }
 
-function fcast { echo "$df $s on Source Mage"
+function fcast { s='cast'; echo "$df $s on Source Mage"
   mkaliases cast '' "$err1" "$err2" dispel '' scribe update sorcery upgrade gaze search gaze installed scribe index scribe add scribe remove
 }
 
@@ -162,11 +174,15 @@ function fpkg { s='pkg'; echo "$df $s on FreeBSD 10.0+"
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
 
-for i in ${checkarray[@]};
+for i in "${checkarray[@]}";
 do
-  ($checkcmd $i &>/dev/null) && f$i
+  ("$checkcmd" "$i" &>/dev/null) && "f$i"
 done
 
 echo "Aliases added. If you don't know them just open this script to find out."
 
-echo "source ~/.bash_aliases" >> ~/.bashrc 
+# Load the aliases from .bashrc, but only add the line once
+line='source ~/.bash_aliases'
+if ! grep -qxF "$line" "$bashrc" 2>/dev/null; then
+  echo "$line" >> "$bashrc"
+fi
