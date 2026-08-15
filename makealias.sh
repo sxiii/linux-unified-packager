@@ -33,36 +33,101 @@
 # Written by Security XIII at Gmail Dot Com.
 # v 0.05 alpha, has to check it on many distros ! but probably usable somehow #
 ###############################################################################
-# Re-creates empty bash aliases file for you (fix if needed)
+set -u -o pipefail
+
+progname="${0##*/}"
+
+# Reports a fatal problem and stops the script
+die() {
+  echo "$progname: error: $*" >&2
+  exit 1
+}
+
+# Reports a problem the user should know about, without stopping the script
+warn() {
+  echo "$progname: warning: $*" >&2
+}
+
+# Bash aliases file this script generates
 afile="$HOME/.bash_aliases"
-rm $afile; touch $afile
+# Shell startup file which sources the aliases file
+rcfile="$HOME/.bashrc"
 # If your distro/user doesen't need sudo just comment the following line:
 sn='sudo'
 # Choose your editor (to open mirror files)
 ed='nano'
 # Distro founded
 df="You're using"
-# Set debug="echo" to turn on debug mode (does not make any syschanges)
+# Set debug="yes" to turn on debug mode (prints aliases, makes no syschanges)
 debug=""
-# Error handling
-err1="echo"
-err2="not needed"
+# Marker for operations a package manager does not support
+unsup='__lup_unsupported'
+
+# Keeps a copy of an existing aliases file before it gets overwritten
+backup_afile() {
+  [ -e "$afile" ] || return 0
+  cp -- "$afile" "$afile.bak" ||
+    die "cannot back up existing '$afile' to '$afile.bak'"
+  warn "existing '$afile' was replaced, previous version kept as '$afile.bak'"
+}
+
+# Re-creates empty bash aliases file for you (fix if needed)
+resetdone=""
+resetaliases() {
+  [ -n "$debug" ] && return 0
+  [ -z "$resetdone" ] || return 0
+  resetdone="yes"
+  backup_afile
+  : > "$afile" || die "cannot write to '$afile'"
+  # Aliases for operations the package manager cannot do fail loudly instead of
+  # pretending the operation succeeded.
+  cat >> "$afile" <<EOF || die "cannot write to '$afile'"
+$unsup() {
+  echo "\$1: this operation is not supported by your package manager" >&2
+  return 1
+}
+EOF
+}
+
+# Writes a single alias, or an unsupported-operation stub when no command exists
+mkalias() {
+  local name="$1" cmd="$2" args="$3" line
+  if [ "$cmd" = "$unsup" ] || [ -z "$cmd" ]; then
+    line="alias $name=\"$unsup $name\""
+  else
+    line="alias $name=\"$sn $cmd $args\""
+  fi
+  if [ -n "$debug" ]; then
+    echo "$line"
+  else
+    echo "$line" >> "$afile" || die "cannot write alias '$name' to '$afile'"
+  fi
+}
 
 # Aliases (you can edit them to your like)
 mkaliases() {
+[ "$#" -eq 20 ] ||
+  die "mkaliases needs 20 arguments (got $#) for package manager '${s:-unknown}'"
 shopt -s expand_aliases
-$debug echo "alias i=\"$sn $1 $2\"" >> $afile        # installing packages (from repo)
-$debug echo "alias ii=\"$sn $3 $4\"" >> $afile       # installing packages (from file)
-$debug echo "alias r=\"$sn $5 $6\"" >> $afile        # removing packages
-$debug echo "alias up=\"$sn $7 $8\"" >> $afile       # updating packages (list)
-$debug echo "alias ug=\"$sn $9 ${10}\"" >> $afile    # upgrading packages (themselves)
-$debug echo "alias s=\"$sn ${11} ${12}\"" >> $afile  # searching packages
-$debug echo "alias li=\"$sn ${13} ${14}\"" >> $afile # list installed packages
-$debug echo "alias rl=\"$sn ${15} ${16}\"" >> $afile   # list your repositories
-$debug echo "alias ra=\"$sn ${17} ${18}\"" >> $afile # add new repository or PPA
-$debug echo "alias rr=\"$sn ${19} ${20}\"" >> $afile # removes repository or PPA
-$debug echo "alias lsb=\"echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*\"" >> $afile # info
-source ~/.bash_aliases
+resetaliases
+mkalias i "$1" "$2"          # installing packages (from repo)
+mkalias ii "$3" "$4"         # installing packages (from file)
+mkalias r "$5" "$6"          # removing packages
+mkalias up "$7" "$8"         # updating packages (list)
+mkalias ug "$9" "${10}"      # upgrading packages (themselves)
+mkalias s "${11}" "${12}"    # searching packages
+mkalias li "${13}" "${14}"   # list installed packages
+mkalias rl "${15}" "${16}"   # list your repositories
+mkalias ra "${17}" "${18}"   # add new repository or PPA
+mkalias rr "${19}" "${20}"   # removes repository or PPA
+lsb="alias lsb=\"echo /etc/*_ver* /etc/*-rel*; cat /etc/*_ver* /etc/*-rel*\"" # info
+if [ -n "$debug" ]; then
+  echo "$lsb"
+else
+  echo "$lsb" >> "$afile" || die "cannot write alias 'lsb' to '$afile'"
+  # shellcheck source=/dev/null
+  source "$afile" || warn "'$afile' was written but could not be sourced"
+fi
 }
 
 # Command to check existence of package manager (can also be command or type)
@@ -76,6 +141,8 @@ checkcmd='hash'
 # When writing functions, include options from mkaliases one after another
 # (!) Don't forget to include empty places '' if no variable is needed (!)
 # (!) You should pass total of 20 variables, most of which shouldn't be empty.
+# (!) For operations your package manager can't do, pass "$unsup" '' - the
+# (!) resulting alias then explains the problem and returns 1 when it is used.
 
   # Writing own function help sample
 fapt-get() { s='apt-get'; echo "$df $s on Debian/Ubuntu"
@@ -105,7 +172,7 @@ function fslapt-get { s='slapt-get'; echo "$df $s on Vector"
 }
 
 function fnetpkg { s='netpkg'; echo "$df $s on Zenwalk"
-  mkaliases $s '' $s '' $s remove "$err1" "$err2" $s upgrade $s 'list | grep' $s 'list I' $s mirror "$sn $ed" '/etc/netpkg.conf' "$sn $ed" '/etc/netpkg.conf'
+  mkaliases $s '' $s '' $s remove "$unsup" '' $s upgrade $s 'list | grep' $s 'list I' $s mirror "$sn $ed" '/etc/netpkg.conf' "$sn $ed" '/etc/netpkg.conf'
 }
 
 function fequo { s='equo'; echo "$df $s on Sabayon"
@@ -117,7 +184,7 @@ function fpacman { s='pacman'; echo "$df $s on Arch/Manjaro"
 }
 
 function fconary { s='conary'; echo "$df $s on Foresight/rPath"
-  mkaliases $s update $s update $s erase "$err1" "$err2" $s updateall $s query $s query "$err1" "$err2" "$err1" "$err2" "$err1" "$err2"
+  mkaliases $s update $s update $s erase "$unsup" '' $s updateall $s query $s query "$unsup" '' "$unsup" '' "$unsup" ''
 }
 
 function fapk { s='apk'; echo "$df $s on Alpine"
@@ -129,44 +196,59 @@ function fsmart { s='smart'; echo "$df $s on Mandriva/OpenSUSE"
 }
 
 function fpkcon { s='pkcon'; echo "$df $s on Fedora/Ubuntu/OpenSUSE/Mandriva"
-  mkaliases $s install $s install-file $s remove $s refresh $s upgrade $s search $s search $s repo-list "$err1" "$err2" "$err1" "$err2"
+  mkaliases $s install $s install-file $s remove $s refresh $s upgrade $s search $s search $s repo-list "$unsup" '' "$unsup" ''
 }
 
 function femerge { s='emerge'; echo "$df $s on Gentoo"
-  mkaliases $s '' "$err1" "$err2" $s '-aC' $s '--sync' $s '-NuDa world' $s '--search' qlist -I layman -L layman -a layman -d
+  mkaliases $s '' "$unsup" '' $s '-aC' $s '--sync' $s '-NuDa world' $s '--search' qlist -I layman -L layman -a layman -d
 }
 
 function flin { s='lin'; echo "$df $s on Lunar"
-  mkaliases $s '' "$err1" "$err2" lrm '' $s moonbase lunar update lvu search lvu installed "$err1" "$err2" "$err1" "$err2" "$err1" "$err2"
+  mkaliases $s '' "$unsup" '' lrm '' $s moonbase lunar update lvu search lvu installed "$unsup" '' "$unsup" '' "$unsup" ''
 }
 
-function fcast { echo "$df $s on Source Mage"
-  mkaliases cast '' "$err1" "$err2" dispel '' scribe update sorcery upgrade gaze search gaze installed scribe index scribe add scribe remove
+function fcast { s='cast'; echo "$df $s on Source Mage"
+  mkaliases cast '' "$unsup" '' dispel '' scribe update sorcery upgrade gaze search gaze installed scribe index scribe add scribe remove
 }
 
 function fnix-env { s='nix-env'; echo "$df $s on NixOS"
-  mkaliases $s -i "$err1" "$err2" $s -e nix-channel --update nix-env -u nix-env -qa nix-env -q nix-channel --list nix-channel --add nix-channel --remove
+  mkaliases $s -i "$unsup" '' $s -e nix-channel --update nix-env -u nix-env -qa nix-env -q nix-channel --list nix-channel --add nix-channel --remove
 }
 
 function fxbps-install { s='xbps-install'; echo "$df $s on Void"
-  mkaliases $s '' "$err1" "$err2" xbps-remove '' $s -S $s -u xbps-query -Rs xbps-query -l xbps-query -L 'cd /etc/xbps/repo.d/' '&& ls' 'cd /etc/xbps/repo.d/' '&& ls'
+  mkaliases $s '' "$unsup" '' xbps-remove '' $s -S $s -u xbps-query -Rs xbps-query -l xbps-query -L 'cd /etc/xbps/repo.d/' '&& ls' 'cd /etc/xbps/repo.d/' '&& ls'
 }
 
 function fsnappy { s='snappy'; echo "$df $s on Ubuntu Snappy"
-  mkaliases $s install "$err1" "$err2" $s remove "$err1" "$err2" $s update $s search $s list "$err1" "$err2" "$err1" "$err2" "$err1" "$err2"
+  mkaliases $s install "$unsup" '' $s remove "$unsup" '' $s update $s search $s list "$unsup" '' "$unsup" '' "$unsup" ''
 }
 
 function fpkg { s='pkg'; echo "$df $s on FreeBSD 10.0+"
-  mkaliases $s install $s add $s remove $s update $s upgrade $s search $s info "$err1" "$err2" "$err1" "$err2" "$err1" "$err2"
+  mkaliases $s install $s add $s remove $s update $s upgrade $s search $s info "$unsup" '' "$unsup" '' "$unsup" ''
 }
 
 checkarray=(apt-get zypper yum urpmi slackpkg slapt-get netpkg equo pacman conary apk smart pkcon emerge lin cast nix-env xbps-install snappy pkg)
 
-for i in ${checkarray[@]};
+found=0
+for i in "${checkarray[@]}"
 do
-  ($checkcmd $i &>/dev/null) && f$i
+  "$checkcmd" "$i" >/dev/null 2>&1 || continue
+  "f$i" || die "found '$i' but failed to create aliases for it"
+  found=$((found + 1))
 done
+
+[ "$found" -gt 0 ] ||
+  die "none of the supported package managers (${checkarray[*]}) was found, no aliases were created"
+
+[ "$found" -eq 1 ] ||
+  warn "$found package managers were found, aliases were created for the last one only"
 
 echo "Aliases added. If you don't know them just open this script to find out."
 
-echo "source ~/.bash_aliases" >> ~/.bashrc 
+if [ -n "$debug" ]; then
+  echo "source $afile"
+elif grep -qF -e "source $afile" -e 'source ~/.bash_aliases' "$rcfile" 2>/dev/null; then
+  echo "'$rcfile' already sources '$afile', leaving it as it is."
+else
+  echo "source $afile" >> "$rcfile" || die "cannot add 'source $afile' to '$rcfile'"
+fi

@@ -84,6 +84,13 @@ This script was written in the idea of uniting several package management system
 
 It took me few nights to write and debug this script. The time has passed but currently I did tested it many times only on my two main distros - Manjaro (Arch-based linux) and Ubuntu (Debian-based one). I hope the script will be improved by you & the community (read next).
 
+## Errors & debug mode
+The script stops with a message on standard error (and a non-zero exit code) when something really went wrong: no supported package manager was found, or `~/.bash_aliases` / `~/.bashrc` cannot be written. Less critical problems are reported as warnings, for example when an existing `~/.bash_aliases` is replaced (the old one is kept as `~/.bash_aliases.bak`) or when several package managers are present (only the last one wins).
+
+Aliases for operations your package manager does not support also fail loudly: `ii` on Void prints an explanation to standard error and returns 1, so scripts using these aliases can detect the failure.
+
+To see what the script would do without touching any file, set `debug="yes"` near the top of the script and run it - the aliases are printed instead of written.
+
 ## Developers & testers needed
 If you just tested the script on your local PC and it works well, you can write an issue about that or commit here exact name & version of your system. More importantly, if the script DOES NOT work well, you should commit the issue to this repo with all details on your system, please. It will help whole community.
 
