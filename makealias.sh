@@ -138,7 +138,7 @@ mkaliases() {
 # Shared building blocks for the package manager commands below
 show_conf() { echo "cat $1"; }     # print a configuration file
 edit_conf() { echo "$ed $1"; }     # open a configuration file in the editor
-list_dir() { echo "cd $1 && ls"; } # list a repository configuration directory
+list_dir() { echo "ls $1"; }       # list a repository configuration directory
 
 # Reports the detected package manager and exports its name as $s
 pm() { s="$1"; echo "$df $s on $2"; }
